@@ -1,23 +1,30 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import http.server
 import json
+from urllib.parse import urlparse, parse_qs
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all origins
-
-# Load the student marks from the JSON file
-with open(q-vercel-python.json') as f:
+# Load student marks from the JSON file
+with open('q-vercel-python.json') as f:
     students_marks = json.load(f)
 
-@app.route('/api', methods=['GET'])
-def get_marks():
-    names = request.args.getlist('name')  # Get list of names from query parameters
-    marks = []
+class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Enable CORS
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")  # Allow any origin
+        self.end_headers()
 
-    for name in names:
-        marks.append(students_marks.get(name, "Not Found"))  # Return "Not Found" if name is not in dictionary
+        # Parse query parameters
+        parsed_url = urlparse(self.path)
+        query_params = parse_qs(parsed_url.query)
 
-    return jsonify({"marks": marks})
+        # Get the names from the query parameters
+        names = query_params.get("name", [])
+        marks = [students_marks.get(name, "Not Found") for name in names]
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        # Respond with the marks in the required format
+        response = {"marks": marks}
+        self.wfile.write(json.dumps(response).encode("utf-8"))
+
+# Export handler to be used by Vercel
+handler = CORSRequestHandler
